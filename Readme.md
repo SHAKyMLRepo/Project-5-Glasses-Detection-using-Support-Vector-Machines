@@ -24,7 +24,7 @@
      - **Source Quality**: The data was sourced from Kaggle and has a low usability score. This means that it will have to be checked in preprocessing to ensure it's data quality.
      - **Link**: [here](https://www.kaggle.com/datasets/saramhai/people-with-and-without-glasses-dataset)
 
-### Data Preprocessing
+### Data Exploration
 <p> As this project is using a different dataset, some data exploration and preprocessing is required to make sure the data is clean and ready for modelling. The reference notebook uses native sklearn functions to perform data exploration on it's image set as seen below. </p>
 ![Data exploration](Images/dataexploration.png)
 <p> In this project, custom data exploration is involved. First a function was created to gather metadata on the contents of each data seperately as below. This function counted the size of each class in terms of images, validated that each file had a picture suffix such as .jpg and counted any files that did not have the correct format.</p>
@@ -58,98 +58,195 @@ def getfolderinfo(FOLDER_PATH,folders):
 
     return folder_info
 ```
-### Dataset - Glasses and Covering
-<p> Function was used to analyse contents of dataset. The results below show that the dataset is balanced in terms of numbers of images so there is not imbalance in the data which might cause bias.</p>
-
+#### Dataset - Glasses and Covering
 ![alt text](Images/ds1_counts.png)
+
+<p> Function was used to analyse contents of dataset. The results show that the dataset is balanced in terms of numbers of images so there is not imbalance in the data which might cause bias.</p>
+
+![alt text](Images/ds1filetypes.png)
 
 <p><p> All files in folders are images with most files being jpg in this dataset with small exception. This should cause no problems going forward.</p>
 
-![alt text](Images/filetypes.png)
+#### Dataset - Glasses and no glasses
 
-#### Checking for null values
-<p> Some checks are made to ensure that the data is clean and there are no null values in the dataset. This check showed that there are none </p>
+<p>Dataset is fairly balanced with a slight bias towards images with glasses with the difference about 16%. This may cause a slight bias but these datasets will be combined so the variance can be rechecked then.</p>
+
+![alt text](Images/ds2_counts.png)
+
+<p> All files in folders are images with all files being jpg in this dataset. This should cause no problems going forward.</p>
+
+![alt text](Images/ds2filetypes.png)
+
+#### Dataset - Combined
+<p>Combining these datasets leads to a large imbalance in numbers of images with sunglasses. This has the potential to bias the model against the sunglasses class. To rectify, when creating training data, we could take all images from sunglasses and equal images from glasses and plain but we will wait till model evaluation to see how this effects performance.</p>
+
+![alt text](Images/counts.png)
+
+![alt text](Images/images.png)
+
+<p>Above some sample images from the dataset</p
+>
+
+### Data Preprocessing
+
+#### Parsing Images
+<p>Since the reference notebook got its data from sklearn it was already in the correct format for input into the machine learning algorithm. Our datasets however had to be prepared and reshaped before processing. To do this processing, I created a function to iterate through the folders and read the images into tuples of the image array and its corresponding label.</p>
+
 ```
-df[df.isnull().any(axis=1)].count()
+##Reading all the images and converting to array for data and labels
+
+def create_training_data(FOLDER, folders):
+    training_data = []
+    for folder in folders:
+        path = os.path.join(FOLDER, folder)
+        class_num = folders.index(folder) #0,1
+        for img in os.listdir(path)[:len(os.listdir(path))]:
+            try:
+                img_array = cv2.imread(os.path.join(path + "\\" + img), cv2.IMREAD_GRAYSCALE)
+                backtorgb = cv2.cvtColor(img_array, cv2.COLOR_GRAY2RGB)
+                new_array = cv2.resize(backtorgb, (256, 256))
+                training_data.append([new_array, class_num])
+            except Exception as e:
+                pass 
+    return training_data
+
+```
+#### Flattening Images
+<p> The image arrays then had to be translated into numpy arrays and flattened for use with the Support Vector Machine algorithm.</p>
+```
+# Flatten images
+X_train = X_train.reshape(X_train.shape[0],-1)
+X_train.shape
 ```
 
-#### Dropping unneeded columns
-<p> The dataset included three commas at the end of each row which created 3 unneeded columns once parsed. This columns were dropped. </p>
-
-```
-df.drop(columns=['Unnamed: 2', 'Unnamed: 3', 'Unnamed: 4'], inplace=True)
-```
 ### Model Creation
 
-#### Feature Preparation
-<p> This project prepares the data for modelling in a different way given the data source and the fact this is a binary classfication algorithm with a single feature variable. The correct variables are placed in X and y arrays and reshape is used to flatten both arrays.</p>
+#### Models
+<p> For this project a number of models using different data and hyperparameters were created to try and finetune the model to achieve the highest accuracy possible.</p>
 
-#### Target Variable Encoding
-<p> This project uses a label encoder to encode categorical target variable. O for ham and 1 for spam </p>
-
-```
-from sklearn.preprocessing import LabelEncoder
-labels = ['ham','spam']
-lab_encoder = LabelEncoder()
-y = lab_encoder.fit_transform(y)
-```
-
-### Model Evaluation
-
-#### Classification Report
-<p> Here this project does additional metrics to evaluate the model by preparing a classification report </p> 
-
-#### Evaluation Function
-<p> This project creates an evaluation function which is designed to test the variance of different models across different subsets of the data. This function takes as parameters, the X and y arrays, the number of iterations that should be run, the training/test split size, the text encoding function, the model types and a boolean that states whether random random_states should be used or not </p>
+##### Model 1
+<p> The first model was a Support Vector Machine with kernel set to rbf and class_weight set to balanced. These are two of the parameters which can be used to tune the model.
 
 ```
-def evaluate_variance(X, y, num_iterations, test_size, textEncoder, modelType, random_state=True):
-    accuracy_scores = []
-
-    if not random_state:
-        num_iterations = 10
-        
-    for i in range(num_iterations):
-
-        random_states = [12345, 54321, 32145, 43125, 23145, 0, 10, 20, 30, 40, 50]
-
-        if random_state:
-            random_states = np.random.randint(1, 100000, size=num_iterations)
-
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_states[i])
-        
-        # Create and fit the model
-        model = make_pipeline(textEncoder, modelType)
-        model.fit(X_train, y_train)
-        
-        # Make predictions and calculate accuracy
-        y_pred = model.predict(X_test)
-        accuracy = accuracy_score(y_test, y_pred)
-        print("Run ", i, " with random state: ", random_states[i], ": ",accuracy)
-        accuracy_scores.append(accuracy)
-
-    # Calculate the average accuracy and variance
-    average_accuracy = np.mean(accuracy_scores)
-    variance_accuracy = np.var(accuracy_scores)
-        
-    return average_accuracy, variance_accuracy
+model = SVC(kernel='rbf', class_weight='balanced')
 ```
 
-#### Feature Engineering
-<p> The next difference here is that some basic feature engineering is conducted to try and increase model accuracy. </p>
+- **Kernel**: The default kernel is RBF standing for Radial Balance Function and is effective for non-linear relationships in data.<br>
+- **Class_weight**: This is a weight applied to the target classes. Can be unsed to balance imbalanced class distributions. eg. sunglasses.
 
-1. Ignore Case: All words in X are made lowercase. This had no effect on accuracy of algorithm.
-2. Removing Punctuation: All punctuation is removed from X. This lowered accuracy from 0.9539 to 0.9451. This implies punctuation is useful in the detection of Spam messages. In particular removing punctuation led to more false positives for spam messages.
+###### Model 1 Evaluation
+**Result**: Dataset was too large for SVM. SVMs have poor performance on large datasets due to the exponential calculations as the dataset grows. Therefore this model had to be discarded.
 
-#### Model Selection
-<p> This project also tried to experiment with different encodings and algorithm variations to try and get the highest accuracy possible for predictions.</p>
+##### Model 2
+<p> For the next model, this project used Principal Component Analysis to see if this could reduce the data the SVM must calculate a fit for. This model created a fit in around 120 seconds compared to the previous which ran for 20 minutes before stopping execution. This shows that using PCA is very useful when utilizing the standard SVM algorithm on large datasets. </p>
 
-1. CountVectorizer for text encoding: Switched the text encoding method to a simple CountVectorizer which counts word frequencies like TFid but does not add a weight to word importance. This boosted accuracy from .9539 to .9825 and greatly reduced false positive rates for Spam messages.
-2. CountVectorizer ignoring frequency: Using the binary=True option on CountVectorizer makes all non-zero frequencies = 1. So this only uses a binary consideration of whether a word is within a message or not. With this option, accuracy dropped from .9825 to .9817. This result shows that word frequency, perhaps surprisely, while useful does not have that great an impact on model accuracy.
-3. BernoulliDB: As BernoulliNB is designed for binary values, the next test was to switch to this model while keeping CountVectorizer with binary set to True. Even though Bernoulli is designed to work with binary values, it performs worse than Multinomial Naive Bayes with accuracy of .96
+```
+from sklearn.pipeline import make_pipeline
 
-<p>Overall the best performance was achieved using a combination of CountVectorizer for text encoding and MultinomialNB </p>
+#Set components to 150
+pca = PCA(n_components=150, whiten=True,
+          svd_solver='randomized', random_state=42)
+svc = SVC(kernel='rbf', class_weight='balanced')
+model = make_pipeline(pca, svc)
+```
 
-### Deployment
-<p> Another change to this project is that a simple webapp was created to demonstrate the deployment of such a model. As such at the end of this Jupyter notebook, pickle was used to dump the finetuned model to a file. This file was then used to build an online webapp using the model to predict if entered text is SPAM. You can find the website [here](http://roadlesswalked.pythonanywhere.com/), please feel free to try it out. </p>
+###### Model 2 Evaluation
 
+![alt text](Images/model2results.png)
+
+**Result**: The results for model 2 performs shows that the model works well for glasses and no glasses but poorly for the sunglasses class. The imbalance in the dataset does indeed seem to cause bias in our model around the sunglasses class.
+
+##### Model 3
+<p> For this model, class_weight will be used to try and improve accuracy for the sunglasses class by calculating weights for each class. The code below was used to estimate appropriate class weighting based on their frequency.</p>
+
+```
+class_weights=[]
+for i, size in enumerate(combined_size):
+    class_weights.append( str(combined_sum / (entries * size)))
+class_weights
+```
+<p>The model code can be viewed below. The class_weights parameter takes a dict with keys being the classes and values being strings containing the weighting value.</p>
+
+```
+pca = PCA(n_components=150, whiten=True,
+          svd_solver='randomized', random_state=42)
+svc = SVC(kernel='rbf', class_weight=class_weights_dict)
+model = make_pipeline(pca, svc)
+```
+
+###### Model 3 Evaluation
+
+![alt text](Images/model2results.png)
+
+**Result**: The results for model 3 were surprising as adding these weighting values did not change model performance.
+
+##### Model 4
+<p> For this model, since class_weight did not seem to work, the next step was to change the training data itself. As such the create_training_data function was adapted to produce training data with an equal distribution of images for each class. The code can be seen below.</p>
+
+```
+def create_training_data_equalised(FOLDER, folders):
+    training_data = []
+    
+    # Get max number of files
+    files_folder = [[len(os.listdir(os.path.join(FOLDER, folder))),folder] for folder in folders]
+    max_files_path = os.path.join(FOLDER, min(files_folder)[1])
+    max_files_count = min(files_folder)[0]
+    
+    # Transfer max number of files
+    for folder in folders:
+        for i in range(0,max_files_count-1):
+            try:
+                path = os.path.join(FOLDER, folder)
+                img = os.listdir(path)[i]
+                img_array = cv2.imread(os.path.join(path, img), cv2.IMREAD_GRAYSCALE)
+                backtorgb = cv2.cvtColor(img_array, cv2.COLOR_GRAY2RGB)
+                new_array = cv2.resize(backtorgb, (256, 256))
+                class_num = folders.index(folder)
+                training_data.append([new_array, class_num])
+            except Exception as e:
+                pass
+    return training_data
+
+```
+<p>The model itself used the same setup as Model 2 so only the training data was altered.</p>
+
+###### Model 4 Evaluation
+
+![alt text](Images/model4results.png)
+
+**Result**: The results for model 4 were very promising. A small decrease in accuracy for plain and sunglasses was observed but a large decrease in bias was also achieved for the sunglasses class. This suggest that the poor results for sunglasses were indeed related to the imbalanced dataset.
+
+##### Model 5
+<p>For model 5, the focus will be on tuning the hyperparameters for the Support Vector Machine.There are two parameters that first will be considered:</p>
+
+- **C**: This parameter controls margin hardness (the tradeoff between maximum margin and minimum classification error)
+- **Gamma**: This parameter sets the distance from the margin in which the algorithm will consider point for margin calculations. Small gamma means the algorithm will consider points at larger distances.
+
+<p>GridSearchCV was use to perform cross validation to find the optimal parameters for these two hyperparameters</p>
+
+```
+from sklearn.model_selection import GridSearchCV
+param_grid = {'svc__C': [1, 5, 10, 50],
+              'svc__gamma': [0.0001, 0.0005, 0.001, 0.005]}
+grid = GridSearchCV(model, param_grid)
+
+%time grid.fit(X1_train, y1_train)
+```
+<p>This cross validation needed 9 hours of CPU time to compute once again showing the challenges of working with Support Vector Machines with large datasets and found the parameters below as the best parameters.</p>
+
+![alt text](Images/params.png)
+
+###### Model 5 Evaluation
+
+![alt text](Images/model5results.png)
+
+**Result**: The results for model 5 were the best so far with a good balance of accuracy for all classes. This shows that the cross validation did find better parameters for model accuracy</p>
+
+##### Model 6
+<p>For model 6, further tuning of the sample number n_components for the PCA decomposition and C parameter for the SVM. This was done manually due to the excessivecomputation time needed for cross validation on this large dataset. The best values for these parameters found was n_components:75 and C parameter 7.5, between the 5 and 10 possible values the cross validation checked.</p>
+
+###### Model 5 Evaluation
+
+![alt text](Images/model6results.png)
+
+**Result**: Model 6 was the most accurate model found with a good balance between the accuracy for all classes.
