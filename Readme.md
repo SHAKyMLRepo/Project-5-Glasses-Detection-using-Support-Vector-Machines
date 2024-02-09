@@ -5,6 +5,7 @@
 ### Project Goals
 <p> The goal of the notebook being followed is to give an overview of the Support Vector Machine machine learning algorithm. One task this notebook completes which inspired the current project is the classification of a number of images of famous people into the correct person in the image.</p>
 <br>
+
 ![Categories](Images/dataexploration.png)
 
 <br>
@@ -84,8 +85,7 @@ def getfolderinfo(FOLDER_PATH,folders):
 
 ![alt text](Images/images.png)
 
-<p>Above some sample images from the dataset</p
->
+<p>Above some sample images from the dataset</p>
 
 ### Data Preprocessing
 
@@ -113,6 +113,7 @@ def create_training_data(FOLDER, folders):
 ```
 #### Flattening Images
 <p> The image arrays then had to be translated into numpy arrays and flattened for use with the Support Vector Machine algorithm.</p>
+
 ```
 # Flatten images
 X_train = X_train.reshape(X_train.shape[0],-1)
