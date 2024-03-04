@@ -262,4 +262,4 @@ The completion of this project illustrated a number learning points for machine 
 
 3. **SVM Hyperparameters and Their Effects**: Another key learning outcomes was the meaning and effect of various SVM hyperparameters such as C and gamma and how they can be tuned to improve model performance.
    
-4. **oss-Validation Techniques for Model Optimization**: Learning how cross validation techniques such as GridSearch can be used for hyperparameter tuning and finetune overall model performance.
+4. **The use of Cross-Validation Techniques for Model Optimization**: Learning how cross validation techniques such as GridSearch can be used for hyperparameter tuning and finetune overall model performance.
