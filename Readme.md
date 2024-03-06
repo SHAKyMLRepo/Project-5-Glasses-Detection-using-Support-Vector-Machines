@@ -3,7 +3,7 @@
 ## Changes
 ### Notebook
 If you wish to experiment with the code, you can find the notebook in the reposititory at the link below. There is no collab notebook due to the size of the dataset exceeding GitHub's size limit.<br> 
-[Notebook - Animal Classification](https://github.com/SHAKyMLRepo/Project-8-Animal-Image-Classification-using-CNNs/blob/main/AnimalClassification-CNN.ipynb)
+[Notebook - Glasses Image Classification](https://github.com/SHAKyMLRepo/Project-5-Glasses-Detection-using-Support-Vector-Machines/blob/main/SVM_Project.ipynb)
 <br>
 ### Project Goals
 <p> The goal of the notebook being followed is to give an overview of the Support Vector Machine machine learning algorithm. For credit to the author and reference a link to the notebook being followed can be found at the following link: https://jakevdp.github.io/PythonDataScienceHandbook/05.07-support-vector-machines.html <br>
